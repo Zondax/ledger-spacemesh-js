@@ -19,7 +19,7 @@ import { ByteStream } from '@zondax/ledger-js/dist/byteStream'
 
 import { P1_VALUES, PUBKEYLEN } from './consts'
 import { Account, AccountType, ResponseAddress, VaultAccount } from './types'
-import { EdSigner, ResponseSign } from './types'
+import { ResponseSign } from './types'
 
 export class SpaceMeshApp extends BaseApp {
     static _INS = {
@@ -138,9 +138,8 @@ export class SpaceMeshApp extends BaseApp {
         }
     }
 
-    async sign(path: BIP32Path, blob: EdSigner): Promise<ResponseSign> {
-        const payload = Buffer.concat([blob.prefix, Buffer.from([blob.domain]), blob.message])
-        const chunks = this.prepareChunks(path, payload)
+    async sign(path: BIP32Path, blob: Buffer): Promise<ResponseSign> {
+        const chunks = this.prepareChunks(path, blob)
         try {
             let signatureResponse = await this.signSendChunk(this.INS.SIGN, 1, chunks.length, chunks[0])
 
