@@ -26,11 +26,11 @@ export class SpaceMeshApp extends BaseApp {
         GET_VERSION: 0x00 as number,
         GET_ADDR: 0x01 as number,
         SIGN: 0x02 as number,
-        SIGN_MESSAGE: 0x03 as number,
 
-        GET_ADDR_MULTISIG: 0x04 as number,
-        GET_ADDR_VESTING: 0x05 as number,
-        GET_ADDR_VAULT: 0x06 as number,
+        GET_ADDR_MULTISIG: 0x03 as number,
+        GET_ADDR_VESTING: 0x04 as number,
+        GET_ADDR_VAULT: 0x05 as number,
+        SIGN_MESSAGE: 0x06 as number,
     }
 
     static _params = {
