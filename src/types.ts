@@ -16,7 +16,21 @@ export interface PubkeyItem {
   pubkey: Buffer
 }
 
+export enum Domain {
+  ATX = 0,
+  PROPOSAL = 1,
+  BALLOT = 2,
+  HARE = 3,
+  POET = 4,
+  BEACON_FIRST_MSG = 10,
+  BEACON_FOLLOWUP_MSG = 11,
+}
 
+export interface MsgSigner {
+  prefix: Buffer
+  message: Buffer
+  domain: Domain
+}
 
 export enum AccountType {
   Wallet = 1,

@@ -19,17 +19,18 @@ import { ByteStream } from '@zondax/ledger-js/dist/byteStream'
 
 import { P1_VALUES, PUBKEYLEN } from './consts'
 import { Account, AccountType, ResponseAddress, VaultAccount } from './types'
-import { ResponseSign } from './types'
+import { MsgSigner, ResponseSign } from './types'
 
 export class SpaceMeshApp extends BaseApp {
     static _INS = {
         GET_VERSION: 0x00 as number,
         GET_ADDR: 0x01 as number,
         SIGN: 0x02 as number,
+        SIGN_MESSAGE: 0x03 as number,
 
-        GET_ADDR_MULTISIG: 0x03 as number,
-        GET_ADDR_VESTING: 0x04 as number,
-        GET_ADDR_VAULT: 0x05 as number,
+        GET_ADDR_MULTISIG: 0x04 as number,
+        GET_ADDR_VESTING: 0x05 as number,
+        GET_ADDR_VAULT: 0x06 as number,
     }
 
     static _params = {
@@ -153,4 +154,30 @@ export class SpaceMeshApp extends BaseApp {
             throw processErrorResponse(e)
         }
     }
+
+    async signMessage(path: BIP32Path, signMessage: MsgSigner): Promise<ResponseSign> {
+        const bs = new ByteStream()
+        bs.appendUint16(signMessage.prefix.length)
+        bs.appendUint16(signMessage.message.length)
+        bs.appendBytes(signMessage.prefix)
+        bs.appendUint8(signMessage.domain)
+        bs.appendBytes(signMessage.message)
+
+        const payload = bs.getCompleteBuffer()
+
+        const chunks = this.prepareChunks(path, payload)
+        try {
+            let signatureResponse = await this.signSendChunk(this.INS.SIGN_MESSAGE, 1, chunks.length, chunks[0])
+
+            for (let i = 1; i < chunks.length; i += 1) {
+                signatureResponse = await this.signSendChunk(this.INS.SIGN_MESSAGE, 1 + i, chunks.length, chunks[i])
+            }
+            return {
+                signature: signatureResponse.readBytes(signatureResponse.length()),
+            }
+        } catch (e) {
+            throw processErrorResponse(e)
+        }
+    }
 }
+
