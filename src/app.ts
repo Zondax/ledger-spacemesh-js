@@ -48,30 +48,16 @@ export class SpaceMeshApp extends BaseApp {
         }
     }
 
-    async getAddressAndPubKey(path: string, showAddrInDevice = false): Promise<ResponseAddress> {
-        const bip44PathBuffer = this.serializePath(path)
-        const p1 = showAddrInDevice ? P1_VALUES.SHOW_ADDRESS_IN_DEVICE : P1_VALUES.ONLY_RETRIEVE
-
-        try {
-            const responseBuffer = await this.transport.send(this.CLA, this.INS.GET_ADDR, p1, 0, bip44PathBuffer)
-
-            const response = processResponse(responseBuffer)
-
-            return {
-                pubkey: response.readBytes(PUBKEYLEN),
-                address: response.getAvailableBuffer().toString(),
-            } as ResponseAddress
-        } catch (e) {
-            throw processErrorResponse(e)
-        }
+    async getAddressAndPubKey(path: string, genesisId: Buffer, showAddrInDevice = false): Promise<ResponseAddress> {
+        const p2 = showAddrInDevice ? P1_VALUES.SHOW_ADDRESS_IN_DEVICE : P1_VALUES.ONLY_RETRIEVE
+        return await this.getAddressGeneric(path, p2, this.INS.GET_ADDR, genesisId)
     }
 
-    // FIXME: show addressInDevice is not available?
-
-    async getAddressMultisig(path: string, internalIndex: number, account: Account): Promise<ResponseAddress> {
+    async getAddressMultisig(path: string, internalIndex: number, account: Account, genesisId: Buffer): Promise<ResponseAddress> {
         account.checkSanity(internalIndex)
 
         const bs = new ByteStream()
+        bs.appendBytes(genesisId)
         bs.appendUint8(internalIndex)
         bs.appendBytes(account.serialize())
         const payload = bs.getCompleteBuffer()
@@ -81,13 +67,14 @@ export class SpaceMeshApp extends BaseApp {
         }
         const ins = this.INS.GET_ADDR_MULTISIG
 
-        return await this.getAddressGeneric(path, ins, payload)
+        return await this.getAddressGeneric(path, 0, ins, payload)
     }
 
-    async getAddressVesting(path: string, internalIndex: number, account: Account): Promise<ResponseAddress> {
+    async getAddressVesting(path: string, internalIndex: number, account: Account, genesisId: Buffer): Promise<ResponseAddress> {
         account.checkSanity(internalIndex)
 
         const bs = new ByteStream()
+        bs.appendBytes(genesisId)
         bs.appendUint8(internalIndex)
         bs.appendBytes(account.serialize())
         const payload = bs.getCompleteBuffer()
@@ -98,13 +85,14 @@ export class SpaceMeshApp extends BaseApp {
 
         const ins = this.INS.GET_ADDR_VESTING
 
-        return await this.getAddressGeneric(path, ins, payload)
+        return await this.getAddressGeneric(path, 0, ins, payload)
     }
 
-    async getAddressVault(path: string, internalIndex: number, account: VaultAccount): Promise<ResponseAddress> {
+    async getAddressVault(path: string, internalIndex: number, account: VaultAccount, genesisId: Buffer): Promise<ResponseAddress> {
         account.checkSanity(internalIndex)
 
         const bs = new ByteStream()
+        bs.appendBytes(genesisId)
         bs.appendUint8(internalIndex)
         bs.appendBytes(account.serialize())
         const payload = bs.getCompleteBuffer()
@@ -114,16 +102,16 @@ export class SpaceMeshApp extends BaseApp {
         }
         const ins = this.INS.GET_ADDR_VAULT
 
-        return await this.getAddressGeneric(path, ins, payload)
+        return await this.getAddressGeneric(path, 0, ins, payload)
     }
 
-    private async getAddressGeneric(path: string, ins: number, payload: Buffer): Promise<ResponseAddress> {
+    private async getAddressGeneric(path: string, p2: number, ins: number, payload: Buffer): Promise<ResponseAddress> {
         const chunks = this.prepareChunks(path, payload)
 
         try {
             let response
             for (let i = 0; i < chunks.length; i++) {
-                response = await this.signSendChunk(ins, i + 1, chunks.length, chunks[i])
+                response = await this.sendGenericChunk(ins, p2, i + 1, chunks.length, chunks[i])
             }
 
             if (!response) {
